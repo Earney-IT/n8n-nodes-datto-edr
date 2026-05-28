@@ -336,3 +336,51 @@ test('throws when operations array is empty', () => {
     }),
   ).toThrow(/no operations/i);
 });
+
+// ── extraOperationOptions merge ────────────────────────────────────────────
+
+test('extraOperationOptions are merged into the operation dropdown options', () => {
+  const extra = [
+    {
+      name: 'Isolate',
+      value: 'isolate',
+      action: 'Isolate agents',
+      description: 'Isolate agents from the network',
+    },
+    {
+      name: 'Scan',
+      value: 'scan',
+      action: 'Scan agents',
+      description: 'Scan agents for threats',
+    },
+  ];
+  const props = buildResourceProperties(agentDescriptor, extra);
+  const op = props.find(byName('operation'))!;
+  const values = (op.options as any[]).map((o: any) => o.value as string);
+  expect(values).toContain('getAll');
+  expect(values).toContain('isolate');
+  expect(values).toContain('scan');
+});
+
+test('extraOperationOptions are alpha-sorted with built-in ops', () => {
+  const extra = [
+    { name: 'Zzz Action', value: 'zzz', action: 'Zzz', description: 'z' },
+    { name: 'Aaa Action', value: 'aaa', action: 'Aaa', description: 'a' },
+  ];
+  const props = buildResourceProperties(agentDescriptor, extra);
+  const op = props.find(byName('operation'))!;
+  const names = (op.options as any[]).map((o: any) => o.name as string);
+  // Verify sorted order
+  expect(names).toEqual([...names].sort());
+  // Aaa Action should appear before Get and Zzz after Update
+  expect(names.indexOf('Aaa Action')).toBeLessThan(names.indexOf('Get Many'));
+  expect(names.indexOf('Zzz Action')).toBeGreaterThan(names.indexOf('Update'));
+});
+
+test('calling buildResourceProperties with no extra options behaves identically to old signature', () => {
+  const withEmpty = buildResourceProperties(agentDescriptor, []);
+  const withDefault = buildResourceProperties(agentDescriptor);
+  const opWithEmpty = withEmpty.find(byName('operation'))!;
+  const opWithDefault = withDefault.find(byName('operation'))!;
+  expect(opWithEmpty.options).toEqual(opWithDefault.options);
+});

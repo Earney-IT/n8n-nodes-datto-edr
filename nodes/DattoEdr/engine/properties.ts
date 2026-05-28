@@ -150,17 +150,21 @@ function buildFilterOption(f: FilterField): Record<string, unknown> {
   return opt;
 }
 
-export function buildResourceProperties(d: ResourceDescriptor): INodeProperties[] {
+export function buildResourceProperties(
+  d: ResourceDescriptor,
+  extraOperationOptions: INodePropertyOptions[] = [],
+): INodeProperties[] {
   if (d.operations.length === 0) {
     throw new Error(`ResourceDescriptor '${d.name}' has no operations. At least one operation is required.`);
   }
 
   const props: INodeProperties[] = [];
 
-  // 1. Operation dropdown
-  const opOptions = d.operations
-    .map((op) => buildOperationOption(op, d.displayName))
-    .sort((a, b) => (a.name as string).localeCompare(b.name as string));
+  // 1. Operation dropdown — merge built-in + extra, then alpha-sort by name
+  const opOptions = [
+    ...d.operations.map((op) => buildOperationOption(op, d.displayName)),
+    ...extraOperationOptions,
+  ].sort((a, b) => (a.name as string).localeCompare(b.name as string));
 
   props.push({
     displayName: 'Operation',
