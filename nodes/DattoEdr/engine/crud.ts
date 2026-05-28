@@ -39,6 +39,16 @@ export async function executeGeneric(
       const v = this.getNodeParameter(f.name, index, undefined);
       if (v === undefined) continue;
       if (v === '' && !f.required) continue;
+      // Special __merge property: parse the JSON value and spread it into body
+      // rather than assigning to body['__merge']. Used for "Additional Fields" json fields.
+      if (f.property === '__merge' && f.type === 'json') {
+        const parsed =
+          typeof v === 'string'
+            ? (JSON.parse(v) as IDataObject)
+            : (v as IDataObject);
+        Object.assign(body, parsed);
+        continue;
+      }
       // For json-type fields, parse string → object
       if (f.type === 'json' && typeof v === 'string') {
         body[f.property] = JSON.parse(v) as IDataObject;
