@@ -4,3 +4,4 @@ node_modules
 .env
 .npmrc
 *.log
+.openapi-scratch.json

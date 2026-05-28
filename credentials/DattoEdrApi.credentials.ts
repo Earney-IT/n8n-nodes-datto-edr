@@ -37,23 +37,25 @@ export class DattoEdrApi implements ICredentialType {
 		},
 	];
 
-	// NOTE: Authorization header uses Bearer scheme — TO BE VERIFIED against live API.
-	// Datto EDR (Infocyte) documentation is instance-gated; Bearer is the most likely scheme.
+	// VERIFIED against the live Datto EDR ("Pulse") API (2026-05-20): the token is sent
+	// RAW in the Authorization header — NOT a "Bearer" scheme. (Bearer returns HTTP 500;
+	// raw token returns 200; missing token returns 401.)
 	authenticate: IAuthenticateGeneric = {
 		type: 'generic',
 		properties: {
 			headers: {
-				Authorization: '=Bearer {{$credentials.apiToken}}',
+				Authorization: '={{$credentials.apiToken}}',
 			},
 		},
 	};
 
-	// NOTE: /version is a TENTATIVE test endpoint — TO BE CONFIRMED against live API.
-	// A lightweight unauthenticated-or-cheap endpoint should be substituted once verified.
+	// VERIFIED: GET /users/me requires auth and is lightweight, so it validates both the
+	// base URL and the token (unlike /version, which is public and would pass even with a
+	// bad token).
 	test: ICredentialTestRequest = {
 		request: {
 			baseURL: '={{$credentials.baseUrl}}',
-			url: '/version',
+			url: '/users/me',
 			method: 'GET',
 		},
 	};
