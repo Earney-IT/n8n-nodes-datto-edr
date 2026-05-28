@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="60" height="60">
+  <title>Datto EDR</title>
+  <!-- Datto blue rounded-square background -->
+  <rect width="60" height="60" rx="10" ry="10" fill="#0F75BC"/>
+  <!-- White shield mark -->
+  <path d="M30 10 L46 17 L46 33 C46 43 30 51 30 51 C30 51 14 43 14 33 L14 17 Z"
+        fill="#FFFFFF"/>
+  <!-- Datto blue "D" cut-out inside the shield for brand character -->
+  <path d="M24 22 L30 22 C35.5 22 39 25.5 39 30 C39 34.5 35.5 38 30 38 L24 38 Z
+           M27.5 25.5 L27.5 34.5 L29.5 34.5 C33.5 34.5 35.5 32.5 35.5 30 C35.5 27.5 33.5 25.5 29.5 25.5 Z"
+        fill="#0F75BC" fill-rule="evenodd"/>
+</svg>
