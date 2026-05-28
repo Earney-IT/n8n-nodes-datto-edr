@@ -18,7 +18,6 @@ export const descriptor: ResourceDescriptor = {
       property: 'name',
       type: 'string',
       default: '',
-      required: false,
       description: 'Name of the target group (required when creating)',
       onOperations: ['create', 'update'],
     },
