@@ -5,3 +5,4 @@ node_modules
 .npmrc
 *.log
 .openapi-scratch.json
+.live-verify.ts

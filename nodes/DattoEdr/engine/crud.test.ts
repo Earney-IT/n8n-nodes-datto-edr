@@ -331,3 +331,85 @@ test('get returns empty object from API without throwing', async () => {
   // Engine returns whatever the transport returned, wrapped in returnJsonArray
   expect(out[0].json).toEqual({});
 });
+
+// ── __merge / additionalFields convention ──────────────────────────────────
+
+test('__merge field: parsed JSON is spread into the body, not set as body["__merge"]', async () => {
+  const d: ResourceDescriptor = {
+    name: 'suppressionRule',
+    displayName: 'Suppression Rule',
+    model: 'SuppressionRules',
+    operations: ['create'],
+    fields: [
+      {
+        name: 'name',
+        property: 'name',
+        displayName: 'Name',
+        type: 'string',
+        required: true,
+        onOperations: ['create'],
+      },
+      {
+        name: 'additionalFields',
+        property: '__merge',
+        displayName: 'Additional Fields',
+        type: 'json',
+        default: '{}',
+        onOperations: ['create'],
+      },
+    ],
+  };
+  const ctx = makeCtx({
+    params: {
+      operation: 'create',
+      name: 'Block Mimikatz',
+      additionalFields: '{"description":"Suppress known FP","organizationId":"org-1"}',
+    },
+    httpResponses: [{ id: '99' }],
+  });
+  await executeGeneric.call(ctx, d, 0);
+  expect(ctx._calls[0].body).not.toHaveProperty('__merge');
+  expect(ctx._calls[0].body).toEqual({
+    name: 'Block Mimikatz',
+    description: 'Suppress known FP',
+    organizationId: 'org-1',
+  });
+});
+
+test('__merge field with empty JSON object {} does not alter body', async () => {
+  const d: ResourceDescriptor = {
+    name: 'webhook',
+    displayName: 'Webhook',
+    model: 'Webhooks',
+    operations: ['create'],
+    fields: [
+      {
+        name: 'url',
+        property: 'url',
+        displayName: 'URL',
+        type: 'string',
+        required: true,
+        onOperations: ['create'],
+      },
+      {
+        name: 'additionalFields',
+        property: '__merge',
+        displayName: 'Additional Fields',
+        type: 'json',
+        default: '{}',
+        onOperations: ['create'],
+      },
+    ],
+  };
+  const ctx = makeCtx({
+    params: {
+      operation: 'create',
+      url: 'https://example.com/hook',
+      additionalFields: '{}',
+    },
+    httpResponses: [{ id: '1' }],
+  });
+  await executeGeneric.call(ctx, d, 0);
+  expect(ctx._calls[0].body).not.toHaveProperty('__merge');
+  expect(ctx._calls[0].body).toEqual({ url: 'https://example.com/hook' });
+});

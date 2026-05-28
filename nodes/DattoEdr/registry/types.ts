@@ -21,6 +21,8 @@ export interface FilterField {
   property: string;         // model property for the where clause
   displayName: string;
   type: 'string' | 'number' | 'boolean' | 'dateTime' | 'options';
+  default?: unknown;        // used by n8n ESLint rule; properties.ts uses fieldTypeDefault() instead
+  placeholder?: string;     // used by n8n ESLint rule for email fields
   loadOptionsMethod?: string;
   options?: INodePropertyOptions[];
   description?: string;
