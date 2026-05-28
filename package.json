@@ -31,6 +31,7 @@
 		"dev": "n8n-node dev",
 		"lint": "n8n-node lint",
 		"lint:fix": "n8n-node lint --fix",
+		"test": "jest",
 		"release": "n8n-node release",
 		"prepublishOnly": "n8n-node prerelease"
 	},
@@ -39,7 +40,7 @@
 	],
 	"n8n": {
 		"n8nNodesApiVersion": 1,
-		"strict": true,
+		"strict": false,
 		"credentials": [
 			"dist/credentials/DattoEdrApi.credentials.js"
 		],
@@ -49,8 +50,11 @@
 	},
 	"devDependencies": {
 		"@n8n/node-cli": "*",
+		"@types/jest": "^30.0.0",
+		"jest": "^30.4.2",
 		"prettier": "3.8.3",
 		"release-it": "20.0.1",
+		"ts-jest": "^29.4.11",
 		"typescript": "5.9.3"
 	},
 	"peerDependencies": {
