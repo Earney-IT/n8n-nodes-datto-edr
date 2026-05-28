@@ -6,3 +6,5 @@ node_modules
 *.log
 .openapi-scratch.json
 .live-verify.ts
+.assemble-check.ts
+.live-node.ts
