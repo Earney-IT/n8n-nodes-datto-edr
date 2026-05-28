@@ -10,14 +10,16 @@ export const descriptor: ResourceDescriptor = {
   special: 'targets',
   fields: [
     {
-      // Required for create; also shown on update.
+      // Required conceptually when creating; not enforced at the descriptor level
+      // so that update does not force an empty name into the PATCH body.
+      // The API will reject a create without a name.
       displayName: 'Name',
       name: 'name',
       property: 'name',
       type: 'string',
       default: '',
-      required: true,
-      description: 'Name of the target group',
+      required: false,
+      description: 'Name of the target group (required when creating)',
       onOperations: ['create', 'update'],
     },
     {
