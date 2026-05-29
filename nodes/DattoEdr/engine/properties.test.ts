@@ -242,16 +242,59 @@ test('getAll adds limit (number, default 50, shown when returnAll=false)', () =>
   expect(lim.description as string).toMatch(/Max number of results to return/i);
 });
 
-test('getAll adds filters collection from d.filters', () => {
+test('getAll adds filters as fixedCollection (not plain collection) when d.filters present', () => {
   const props = buildResourceProperties(agentDescriptor);
   const filters = props.find(byName('filters'))!;
   expect(filters).toBeDefined();
-  expect(filters.type).toBe('collection');
-  const opts = filters.options as any[];
-  expect(opts.some((o: any) => (o.displayName as string) === 'Hostname')).toBe(true);
+  expect(filters.type).toBe('fixedCollection');
   expect(filters.displayOptions!.show!.operation).toEqual(
     expect.arrayContaining(['getAll']),
   );
+});
+
+test('filters fixedCollection has multipleValues:true', () => {
+  const props = buildResourceProperties(agentDescriptor);
+  const filters = props.find(byName('filters'))! as any;
+  expect(filters.typeOptions?.multipleValues).toBe(true);
+});
+
+test('filters fixedCollection has a condition group with field, operator, value sub-options', () => {
+  const props = buildResourceProperties(agentDescriptor);
+  const filters = props.find(byName('filters'))! as any;
+  const conditionGroup = (filters.options as any[]).find((o: any) => o.name === 'condition');
+  expect(conditionGroup).toBeDefined();
+  const subVals = conditionGroup.values as any[];
+  expect(subVals.some((v: any) => v.name === 'field')).toBe(true);
+  expect(subVals.some((v: any) => v.name === 'operator')).toBe(true);
+  expect(subVals.some((v: any) => v.name === 'value')).toBe(true);
+});
+
+test('filters condition operator sub-option has all 8 operators', () => {
+  const props = buildResourceProperties(agentDescriptor);
+  const filters = props.find(byName('filters'))! as any;
+  const conditionGroup = (filters.options as any[]).find((o: any) => o.name === 'condition');
+  const operatorField = (conditionGroup.values as any[]).find((v: any) => v.name === 'operator');
+  expect(operatorField).toBeDefined();
+  const opValues = (operatorField.options as any[]).map((o: any) => o.value as string);
+  expect(opValues).toContain('eq');
+  expect(opValues).toContain('neq');
+  expect(opValues).toContain('gt');
+  expect(opValues).toContain('gte');
+  expect(opValues).toContain('lt');
+  expect(opValues).toContain('lte');
+  expect(opValues).toContain('like');
+  expect(opValues).toContain('inq');
+});
+
+test('filters condition field sub-option is options type when d.filters is non-empty', () => {
+  const props = buildResourceProperties(agentDescriptor);
+  const filters = props.find(byName('filters'))! as any;
+  const conditionGroup = (filters.options as any[]).find((o: any) => o.name === 'condition');
+  const fieldOption = (conditionGroup.values as any[]).find((v: any) => v.name === 'field');
+  expect(fieldOption.type).toBe('options');
+  const fieldValues = (fieldOption.options as any[]).map((o: any) => o.value as string);
+  // agentDescriptor in this file has filterHostname (property: hostname)
+  expect(fieldValues).toContain('hostname');
 });
 
 test('filters collection shown on both getAll and count', () => {
@@ -276,13 +319,14 @@ test('no filters collection when d.filters is empty/absent', () => {
 
 // ── options collection (order, fields, include) ────────────────────────────
 
-test('options collection on getAll/get contains order and fields sub-options', () => {
+test('options collection on getAll/get contains order, fields, and whereJson sub-options', () => {
   const props = buildResourceProperties(agentDescriptor);
   const options = props.find(byName('options'))!;
   expect(options).toBeDefined();
   const opts = options.options as any[];
   expect(opts.some((o: any) => o.name === 'order')).toBe(true);
   expect(opts.some((o: any) => o.name === 'fields')).toBe(true);
+  expect(opts.some((o: any) => o.name === 'whereJson')).toBe(true);
 });
 
 test('options collection shown for getAll and get', () => {

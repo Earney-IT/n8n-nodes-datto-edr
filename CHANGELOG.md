@@ -1,3 +1,11 @@
+## 0.2.0 — 2026-05-29
+
+- **Programmatic connection test** — replaced the declarative `GET /users/me` credential test (which false-passed on HTML from the Datto web app) with a programmatic test that validates the response is a JSON object with an `id` or `email` field. The test now returns a clear `Error` status if the Base URL is missing `/api` or the API token is wrong.
+- **Fail loud on non-JSON responses** — `dattoEdrApiRequest` now throws a descriptive `NodeOperationError` (with a `/api` hint) when the API returns an HTML string instead of JSON. Previously the node silently returned `{found:0}`. `dattoEdrApiRequestAllItems` also has an improved error message.
+- **Operator-aware list filtering** — the Filters collection on `getAll` and `count` is now a fixedCollection supporting 8 operators: Equals, Not Equals, Greater Than, Greater Or Equal, Less Than, Less Or Equal, Contains (`like %...%`), and In List (Comma-Sep, maps to LoopBack `inq`). Numeric strings are automatically coerced for comparison operators.
+- **Raw Where JSON** (`whereJson`) — a new `Where (JSON)` field in the Options collection accepts a raw LoopBack `where` clause as JSON; it is merged over the Filters above, enabling any field/operator not covered by the UI.
+- 168 unit tests (Jest, +22 new).
+
 ## 0.1.0 — 2026-05-20
 
 Initial release.

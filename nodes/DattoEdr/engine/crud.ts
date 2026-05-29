@@ -59,23 +59,76 @@ export async function executeGeneric(
     return body;
   };
 
-  /** Read filter options: where (from filters collection), order, fields, include (from options collection). */
+  /**
+   * Coerce a string to a number when it looks numeric; otherwise return as-is.
+   * Used for gt/gte/lt/lte/eq operators so numeric fields aren't sent as strings.
+   */
+  const coerceNumeric = (v: string): string | number => {
+    if (v.trim() !== '' && !isNaN(Number(v))) return Number(v);
+    return v;
+  };
+
+  /**
+   * Build a LoopBack where clause from the new operator-aware fixedCollection.
+   * Input shape: { condition: [{field, operator, value}, ...] }
+   */
+  const buildWhereFromFilters = (): IDataObject => {
+    const where: IDataObject = {};
+    const filtersParam = this.getNodeParameter('filters', index, {}) as IDataObject;
+    const conditions = Array.isArray(filtersParam.condition)
+      ? (filtersParam.condition as Array<{ field: string; operator: string; value: string }>)
+      : [];
+
+    for (const { field, operator, value } of conditions) {
+      if (!field || value === undefined || value === null || value === '') continue;
+
+      switch (operator) {
+        case 'eq':
+          where[field] = coerceNumeric(value);
+          break;
+        case 'neq':
+          where[field] = { neq: value };
+          break;
+        case 'gt':
+          where[field] = { gt: coerceNumeric(value) };
+          break;
+        case 'gte':
+          where[field] = { gte: coerceNumeric(value) };
+          break;
+        case 'lt':
+          where[field] = { lt: coerceNumeric(value) };
+          break;
+        case 'lte':
+          where[field] = { lte: coerceNumeric(value) };
+          break;
+        case 'like':
+          where[field] = { like: `%${value}%` };
+          break;
+        case 'inq':
+          where[field] = {
+            inq: value
+              .split(',')
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0),
+          };
+          break;
+        default:
+          where[field] = value;
+      }
+    }
+
+    return where;
+  };
+
+  /** Read filter options: where (from filters fixedCollection + options.whereJson), order, fields, include. */
   const readOptions = (): {
     where: IDataObject;
     order: string | undefined;
     fields: string[] | undefined;
     include: string[] | undefined;
   } => {
-    // Build where from the filters collection
-    const where: IDataObject = {};
-    const filtersParam = this.getNodeParameter('filters', index, {}) as IDataObject;
-    for (const key of Object.keys(filtersParam)) {
-      const filterDesc = (d.filters ?? []).find((f) => f.name === key);
-      const prop = filterDesc ? filterDesc.property : key;
-      const val = filtersParam[key];
-      if (val === '' || val === undefined || val === null) continue;
-      where[prop] = val;
-    }
+    // Build where from the operator-aware conditions
+    const where = buildWhereFromFilters();
 
     // Read from options collection
     const optionsParam = this.getNodeParameter('options', index, {}) as IDataObject;
@@ -90,6 +143,17 @@ export async function executeGeneric(
     const include = Array.isArray(optionsParam.include)
       ? (optionsParam.include as string[])
       : undefined;
+
+    // Merge whereJson over conditions (raw LoopBack where JSON, advanced)
+    const whereJsonRaw = optionsParam.whereJson;
+    if (whereJsonRaw && typeof whereJsonRaw === 'string' && whereJsonRaw.trim() !== '' && whereJsonRaw.trim() !== '{}') {
+      try {
+        const parsed = JSON.parse(whereJsonRaw) as IDataObject;
+        Object.assign(where, parsed);
+      } catch {
+        // Silently ignore invalid JSON — the build step / lint will catch schema issues
+      }
+    }
 
     return { where, order, fields, include };
   };
@@ -129,15 +193,7 @@ export async function executeGeneric(
     }
 
     case 'count': {
-      const filtersParam = this.getNodeParameter('filters', index, {}) as IDataObject;
-      const where: IDataObject = {};
-      for (const key of Object.keys(filtersParam)) {
-        const filterDesc = (d.filters ?? []).find((f) => f.name === key);
-        const prop = filterDesc ? filterDesc.property : key;
-        const val = filtersParam[key];
-        if (val === '' || val === undefined || val === null) continue;
-        where[prop] = val;
-      }
+      const where = buildWhereFromFilters();
       const qs: IDataObject = {};
       if (Object.keys(where).length > 0) {
         qs.where = JSON.stringify(where);

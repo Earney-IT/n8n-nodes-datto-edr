@@ -74,7 +74,14 @@ export async function dattoEdrApiRequest(
 	}
 
 	try {
-		return await this.helpers.httpRequestWithAuthentication.call(this, 'dattoEdrApi', options);
+		const response = await this.helpers.httpRequestWithAuthentication.call(this, 'dattoEdrApi', options);
+		if (typeof response === 'string') {
+			throw new NodeOperationError(
+				this.getNode(),
+				'Datto EDR returned a non-JSON response (likely the web app, not the API). Check that the credential Base URL ends with /api — e.g. https://YOUR-INSTANCE.infocyte.com/api.',
+			);
+		}
+		return response;
 	} catch (error) {
 		throw toNodeError(this, error);
 	}
@@ -115,7 +122,7 @@ export async function dattoEdrApiRequestAllItems(
 		if (!Array.isArray(result)) {
 			throw new NodeOperationError(
 				(this as IExecuteFunctions).getNode(),
-				`dattoEdrApiRequestAllItems: expected an array from ${resource} but got ${typeof result}. Use dattoEdrApiRequest for single-resource endpoints.`,
+				`dattoEdrApiRequestAllItems: expected an array from ${resource} but got ${typeof result}. If the Base URL is missing /api the API may return HTML — verify the credential Base URL ends with /api (e.g. https://YOUR-INSTANCE.infocyte.com/api).`,
 			);
 		}
 

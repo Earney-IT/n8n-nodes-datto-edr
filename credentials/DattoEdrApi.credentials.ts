@@ -1,6 +1,5 @@
 import type {
 	IAuthenticateGeneric,
-	ICredentialTestRequest,
 	ICredentialType,
 	INodeProperties,
 } from 'n8n-workflow';
@@ -49,14 +48,4 @@ export class DattoEdrApi implements ICredentialType {
 		},
 	};
 
-	// VERIFIED: GET /users/me requires auth and is lightweight, so it validates both the
-	// base URL and the token (unlike /version, which is public and would pass even with a
-	// bad token).
-	test: ICredentialTestRequest = {
-		request: {
-			baseURL: '={{$credentials.baseUrl}}',
-			url: '/users/me',
-			method: 'GET',
-		},
-	};
 }

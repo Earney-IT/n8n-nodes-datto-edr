@@ -65,6 +65,18 @@ test('execute returns flag records for resource=flag operation=getAll', async ()
   expect(out[0][0].json.id).toBe('1');
 });
 
+// ─── B: programmatic credential test wiring ──────────────────────────────────
+
+test('credentials[0].testedBy is dattoEdrApiTest', () => {
+  const n = new DattoEdr();
+  expect((n.description.credentials![0] as any).testedBy).toBe('dattoEdrApiTest');
+});
+
+test('methods.credentialTest.dattoEdrApiTest is a function', () => {
+  const n = new DattoEdr();
+  expect(typeof (n.methods as any).credentialTest?.dattoEdrApiTest).toBe('function');
+});
+
 // ─── n8n #26202: empty result → found:0 envelope ────────────────────────────
 
 test('empty result yields found:0 envelope (n8n #26202)', async () => {

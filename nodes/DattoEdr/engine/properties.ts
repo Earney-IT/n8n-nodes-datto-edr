@@ -1,5 +1,5 @@
 import { INodeProperties, INodePropertyOptions } from 'n8n-workflow';
-import { FieldDescriptor, FilterField, OperationName, ResourceDescriptor } from '../registry/types';
+import { FieldDescriptor, OperationName, ResourceDescriptor } from '../registry/types';
 
 // Operations that require a single-resource ID path param.
 // getAll, count, create take no record id.
@@ -130,25 +130,6 @@ function buildFieldProperty(
   return prop;
 }
 
-function buildFilterOption(f: FilterField): Record<string, unknown> {
-  const opt: Record<string, unknown> = {
-    displayName: f.displayName,
-    name: f.name,
-    type: n8nType(f.type as FieldDescriptor['type']),
-    default: fieldTypeDefault(f.type as FieldDescriptor['type']),
-  };
-  if (f.description !== undefined) {
-    opt.description = f.description;
-  }
-  if (f.type === 'options') {
-    if (f.loadOptionsMethod) {
-      opt.typeOptions = { loadOptionsMethod: f.loadOptionsMethod };
-    } else {
-      opt.options = f.options ?? [];
-    }
-  }
-  return opt;
-}
 
 export function buildResourceProperties(
   d: ResourceDescriptor,
@@ -245,7 +226,7 @@ export function buildResourceProperties(
     });
   }
 
-  // 4b. Filters collection — shown on getAll + count (whichever are present)
+  // 4b. Filters fixedCollection — operator-aware, shown on getAll + count
   if (d.filters && d.filters.length > 0) {
     const filterOps = (['getAll', 'count'] as OperationName[]).filter((op) =>
       d.operations.includes(op),
@@ -254,7 +235,8 @@ export function buildResourceProperties(
       props.push({
         displayName: 'Filters',
         name: 'filters',
-        type: 'collection',
+        type: 'fixedCollection',
+        typeOptions: { multipleValues: true },
         placeholder: 'Add Filter',
         default: {},
         displayOptions: {
@@ -263,12 +245,52 @@ export function buildResourceProperties(
             operation: filterOps,
           },
         },
-        options: d.filters.map(buildFilterOption) as unknown as INodeProperties['options'],
+        options: [
+          {
+            displayName: 'Condition',
+            name: 'condition',
+            values: [
+              // eslint-disable-next-line n8n-nodes-base/node-param-default-missing
+              {
+                displayName: 'Field',
+                name: 'field',
+                type: 'options',
+                default: d.filters[0].property,
+                options: d.filters.map((f) => ({
+                  name: f.displayName,
+                  value: f.property,
+                })),
+              },
+              {
+                displayName: 'Operator',
+                name: 'operator',
+                type: 'options',
+                default: 'eq',
+                options: [
+                  { name: 'Contains', value: 'like' },
+                  { name: 'Equals', value: 'eq' },
+                  { name: 'Greater Or Equal', value: 'gte' },
+                  { name: 'Greater Than', value: 'gt' },
+                  { name: 'In List (Comma-Sep)', value: 'inq' },
+                  { name: 'Less Or Equal', value: 'lte' },
+                  { name: 'Less Than', value: 'lt' },
+                  { name: 'Not Equals', value: 'neq' },
+                ],
+              },
+              {
+                displayName: 'Value',
+                name: 'value',
+                type: 'string',
+                default: '',
+              },
+            ],
+          },
+        ] as unknown as INodeProperties['options'],
       });
     }
   }
 
-  // 5. Options collection (order, fields, include) — shown on getAll + get
+  // 5. Options collection (order, fields, whereJson, include) — shown on getAll + get
   const optionOps = OPTIONS_OPS.filter((op) => d.operations.includes(op));
   if (optionOps.length > 0) {
     const subOptions: Record<string, unknown>[] = [
@@ -285,6 +307,14 @@ export function buildResourceProperties(
         type: 'string',
         default: '',
         description: 'Comma-separated list of fields to include in the response',
+      },
+      {
+        displayName: 'Where (JSON)',
+        name: 'whereJson',
+        type: 'json',
+        default: '{}',
+        description:
+          'Raw LoopBack <code>where</code> clause as JSON (advanced) — merged over the Filters above, enabling any operator/field',
       },
     ];
 

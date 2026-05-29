@@ -106,14 +106,14 @@ test('getAll with returnAll=true calls dattoEdrApiRequestAllItems (no filter.lim
   expect(f0.limit).toBe(100); // pagination page size, not user limit
 });
 
-test('getAll applies where filters correctly', async () => {
+test('getAll applies where filters correctly (eq operator)', async () => {
   const items = [{ id: '5', hostname: 'srv-01' }];
   const ctx = makeCtx({
     params: {
       operation: 'getAll',
       returnAll: false,
       limit: 50,
-      filters: { filterHostname: 'srv-01' },
+      filters: { condition: [{ field: 'hostname', operator: 'eq', value: 'srv-01' }] },
       options: {},
     },
     httpResponses: [items],
@@ -121,6 +121,221 @@ test('getAll applies where filters correctly', async () => {
   await executeGeneric.call(ctx, agentDescriptor, 0);
   const filter = JSON.parse(ctx._calls[0].qs.filter as string);
   expect(filter.where).toEqual({ hostname: 'srv-01' });
+});
+
+// ── C: operator-aware filters ──────────────────────────────────────────────
+
+test('filter operator gt builds {field:{gt:N}} with numeric coercion', async () => {
+  const ctx = makeCtx({
+    params: {
+      operation: 'getAll',
+      returnAll: false,
+      limit: 50,
+      filters: { condition: [{ field: 'score', operator: 'gt', value: '5' }] },
+      options: {},
+    },
+    httpResponses: [[]],
+  });
+  await executeGeneric.call(ctx, agentDescriptor, 0);
+  const filter = JSON.parse(ctx._calls[0].qs.filter as string);
+  expect(filter.where).toEqual({ score: { gt: 5 } });
+});
+
+test('filter operator gte builds {field:{gte:N}}', async () => {
+  const ctx = makeCtx({
+    params: {
+      operation: 'getAll',
+      returnAll: false,
+      limit: 50,
+      filters: { condition: [{ field: 'age', operator: 'gte', value: '18' }] },
+      options: {},
+    },
+    httpResponses: [[]],
+  });
+  await executeGeneric.call(ctx, agentDescriptor, 0);
+  const filter = JSON.parse(ctx._calls[0].qs.filter as string);
+  expect(filter.where).toEqual({ age: { gte: 18 } });
+});
+
+test('filter operator lt builds {field:{lt:N}}', async () => {
+  const ctx = makeCtx({
+    params: {
+      operation: 'getAll',
+      returnAll: false,
+      limit: 50,
+      filters: { condition: [{ field: 'count', operator: 'lt', value: '100' }] },
+      options: {},
+    },
+    httpResponses: [[]],
+  });
+  await executeGeneric.call(ctx, agentDescriptor, 0);
+  const filter = JSON.parse(ctx._calls[0].qs.filter as string);
+  expect(filter.where).toEqual({ count: { lt: 100 } });
+});
+
+test('filter operator lte builds {field:{lte:N}}', async () => {
+  const ctx = makeCtx({
+    params: {
+      operation: 'getAll',
+      returnAll: false,
+      limit: 50,
+      filters: { condition: [{ field: 'priority', operator: 'lte', value: '3' }] },
+      options: {},
+    },
+    httpResponses: [[]],
+  });
+  await executeGeneric.call(ctx, agentDescriptor, 0);
+  const filter = JSON.parse(ctx._calls[0].qs.filter as string);
+  expect(filter.where).toEqual({ priority: { lte: 3 } });
+});
+
+test('filter operator neq builds {field:{neq:value}}', async () => {
+  const ctx = makeCtx({
+    params: {
+      operation: 'getAll',
+      returnAll: false,
+      limit: 50,
+      filters: { condition: [{ field: 'status', operator: 'neq', value: 'inactive' }] },
+      options: {},
+    },
+    httpResponses: [[]],
+  });
+  await executeGeneric.call(ctx, agentDescriptor, 0);
+  const filter = JSON.parse(ctx._calls[0].qs.filter as string);
+  expect(filter.where).toEqual({ status: { neq: 'inactive' } });
+});
+
+test('filter operator like builds {field:{like:"%x%"}}', async () => {
+  const ctx = makeCtx({
+    params: {
+      operation: 'getAll',
+      returnAll: false,
+      limit: 50,
+      filters: { condition: [{ field: 'name', operator: 'like', value: 'srv' }] },
+      options: {},
+    },
+    httpResponses: [[]],
+  });
+  await executeGeneric.call(ctx, agentDescriptor, 0);
+  const filter = JSON.parse(ctx._calls[0].qs.filter as string);
+  expect(filter.where).toEqual({ name: { like: '%srv%' } });
+});
+
+test('filter operator inq splits comma-separated csv into array', async () => {
+  const ctx = makeCtx({
+    params: {
+      operation: 'getAll',
+      returnAll: false,
+      limit: 50,
+      filters: { condition: [{ field: 'status', operator: 'inq', value: 'active, pending,done' }] },
+      options: {},
+    },
+    httpResponses: [[]],
+  });
+  await executeGeneric.call(ctx, agentDescriptor, 0);
+  const filter = JSON.parse(ctx._calls[0].qs.filter as string);
+  expect(filter.where).toEqual({ status: { inq: ['active', 'pending', 'done'] } });
+});
+
+test('filter eq with numeric string coerces to number', async () => {
+  const ctx = makeCtx({
+    params: {
+      operation: 'getAll',
+      returnAll: false,
+      limit: 50,
+      filters: { condition: [{ field: 'port', operator: 'eq', value: '443' }] },
+      options: {},
+    },
+    httpResponses: [[]],
+  });
+  await executeGeneric.call(ctx, agentDescriptor, 0);
+  const filter = JSON.parse(ctx._calls[0].qs.filter as string);
+  expect(filter.where).toEqual({ port: 443 });
+});
+
+test('filter eq with non-numeric string stays string', async () => {
+  const ctx = makeCtx({
+    params: {
+      operation: 'getAll',
+      returnAll: false,
+      limit: 50,
+      filters: { condition: [{ field: 'hostname', operator: 'eq', value: 'myhost' }] },
+      options: {},
+    },
+    httpResponses: [[]],
+  });
+  await executeGeneric.call(ctx, agentDescriptor, 0);
+  const filter = JSON.parse(ctx._calls[0].qs.filter as string);
+  expect(filter.where).toEqual({ hostname: 'myhost' });
+});
+
+test('multiple conditions build multi-field where clause', async () => {
+  const ctx = makeCtx({
+    params: {
+      operation: 'getAll',
+      returnAll: false,
+      limit: 50,
+      filters: {
+        condition: [
+          { field: 'hostname', operator: 'eq', value: 'srv-01' },
+          { field: 'score', operator: 'gt', value: '7' },
+        ],
+      },
+      options: {},
+    },
+    httpResponses: [[]],
+  });
+  await executeGeneric.call(ctx, agentDescriptor, 0);
+  const filter = JSON.parse(ctx._calls[0].qs.filter as string);
+  expect(filter.where).toEqual({ hostname: 'srv-01', score: { gt: 7 } });
+});
+
+test('whereJson in options merges over conditions', async () => {
+  const ctx = makeCtx({
+    params: {
+      operation: 'getAll',
+      returnAll: false,
+      limit: 50,
+      filters: { condition: [{ field: 'hostname', operator: 'eq', value: 'original' }] },
+      options: { whereJson: '{"hostname":"override","extra":true}' },
+    },
+    httpResponses: [[]],
+  });
+  await executeGeneric.call(ctx, agentDescriptor, 0);
+  const filter = JSON.parse(ctx._calls[0].qs.filter as string);
+  expect(filter.where).toEqual({ hostname: 'override', extra: true });
+});
+
+test('empty filters with whereJson only applies whereJson', async () => {
+  const ctx = makeCtx({
+    params: {
+      operation: 'getAll',
+      returnAll: false,
+      limit: 50,
+      filters: {},
+      options: { whereJson: '{"active":true}' },
+    },
+    httpResponses: [[]],
+  });
+  await executeGeneric.call(ctx, agentDescriptor, 0);
+  const filter = JSON.parse(ctx._calls[0].qs.filter as string);
+  expect(filter.where).toEqual({ active: true });
+});
+
+test('no conditions and no whereJson produces no where in filter', async () => {
+  const ctx = makeCtx({
+    params: {
+      operation: 'getAll',
+      returnAll: false,
+      limit: 50,
+      filters: {},
+      options: {},
+    },
+    httpResponses: [[]],
+  });
+  await executeGeneric.call(ctx, agentDescriptor, 0);
+  const filter = JSON.parse(ctx._calls[0].qs.filter as string);
+  expect(filter).not.toHaveProperty('where');
 });
 
 test('getAll applies order and fields from options collection', async () => {
@@ -198,7 +413,10 @@ test('count GETs /Agents/count and returns {count:n}', async () => {
 
 test('count with where filter passes where as JSON string in qs', async () => {
   const ctx = makeCtx({
-    params: { operation: 'count', filters: { filterHostname: 'box-1' } },
+    params: {
+      operation: 'count',
+      filters: { condition: [{ field: 'hostname', operator: 'eq', value: 'box-1' }] },
+    },
     httpResponses: [{ count: 3 }],
   });
   await executeGeneric.call(ctx, agentDescriptor, 0);

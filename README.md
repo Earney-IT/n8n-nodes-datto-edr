@@ -31,10 +31,12 @@ Create a **Datto EDR API** credential with the following fields:
 | **Base URL** | Your console URL followed by `/api` — e.g. `https://YOURINSTANCE.infocyte.com/api` |
 | **API Token** | Generated in the EDR console under **Admin → Users & Tokens → API Tokens** |
 
+**Important:** The Base URL **must** end with `/api` (e.g. `https://YOURINSTANCE.infocyte.com/api`). If you omit `/api` the node hits the Datto web app and returns HTML — the credential test will fail with a clear error message.
+
 **Token notes:**
 - Tokens expire after **1 year** — regenerate and update the credential before expiry.
 - The token is sent as the raw value of the `Authorization` header (not a `Bearer` scheme). This matches the verified behaviour of the Datto EDR Pulse API.
-- The credential test calls `GET /users/me` to validate both the base URL and the token.
+- The credential test calls `GET /users/me` and validates that the response is a JSON object containing an `id` or `email` field (not HTML). A missing `/api` in the Base URL or a wrong token will produce a descriptive error.
 
 Token generation walkthrough: <https://edr.datto.com/help/Content/2-manage/api-generate-token.htm>
 
@@ -101,9 +103,28 @@ The node's tool description is designed so that an LLM can map natural-language 
 
 All **Get Many** operations support LoopBack 3 filtering:
 
-- **Filters** (per-resource `where` clause) — a collection of fields specific to each resource (e.g. hostname, severity, organization). Expand the Filters section to add conditions.
-- **Options** — a separate collection for `order` (sort field and direction), `fields` (projection), and `include` (relation embedding).
-- **Return All** / **Limit** — toggle whether the node fetches all pages automatically or caps at a given count.
+### Filters (operator-aware)
+
+The **Filters** section is a multi-value fixedCollection. Each condition has three fields:
+
+| Field | Description |
+|---|---|
+| **Field** | The filterable attribute for the resource (e.g. `hostname`, `severity`). |
+| **Operator** | Equals, Not Equals, Greater Than, Greater Or Equal, Less Than, Less Or Equal, Contains (like `%value%`), In List (Comma-Sep → LoopBack `inq`). |
+| **Value** | The comparison value. Numeric strings are automatically coerced to numbers for GT/GTE/LT/LTE/EQ. |
+
+Multiple conditions are ANDed together in the LoopBack `where` clause.
+
+### Options
+
+- **Order** — sort field and direction, e.g. `createdOn DESC`.
+- **Fields** — comma-separated field projection, e.g. `id,hostname,status`.
+- **Where (JSON)** — advanced: a raw LoopBack `where` clause as JSON (e.g. `{"severity":{"gt":3}}`). This is merged **over** the Filters above, so it can override or extend any condition.
+- **Include** — embed related resources in the response (where available).
+
+### Return All / Limit
+
+Toggle **Return All** to fetch all pages automatically (uses limit/skip pagination), or set a **Limit** to cap results.
 
 For **Archive**, **Unarchive**, **Delete Files**, and **Restore Files** the filter is a raw LoopBack `where` JSON object (e.g. `{"agentId":"abc-123"}`) that is sent as the `where` query-string parameter.
 

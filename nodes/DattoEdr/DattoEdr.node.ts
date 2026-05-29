@@ -1,5 +1,8 @@
 import {
+  ICredentialTestFunctions,
+  ICredentialsDecrypted,
   IExecuteFunctions,
+  INodeCredentialTestResult,
   INodeExecutionData,
   INodeType,
   INodeTypeDescription,
@@ -45,6 +48,7 @@ export class DattoEdr implements INodeType {
       {
         name: 'dattoEdrApi',
         required: true,
+        testedBy: 'dattoEdrApiTest',
       },
     ],
     properties: [
@@ -66,7 +70,71 @@ export class DattoEdr implements INodeType {
     ],
   };
 
-  methods = { loadOptions };
+  methods = {
+    loadOptions,
+    credentialTest: {
+      async dattoEdrApiTest(
+        this: ICredentialTestFunctions,
+        credential: ICredentialsDecrypted,
+      ): Promise<INodeCredentialTestResult> {
+        const data = credential.data ?? {};
+        const baseUrl = String((data as Record<string, unknown>).baseUrl ?? '').replace(/\/+$/, '');
+        const token = String((data as Record<string, unknown>).apiToken ?? '');
+
+        if (!baseUrl) {
+          return {
+            status: 'Error',
+            message: 'Base URL is required (e.g. https://YOUR-INSTANCE.infocyte.com/api).',
+          };
+        }
+
+        try {
+          // eslint-disable-next-line @n8n/community-nodes/no-deprecated-workflow-functions
+          const res = await this.helpers.request({
+            method: 'GET',
+            uri: `${baseUrl}/users/me`,
+            headers: { Authorization: token, Accept: 'application/json' },
+            json: true,
+            resolveWithFullResponse: false,
+          });
+
+          if (
+            res &&
+            typeof res === 'object' &&
+            !Array.isArray(res) &&
+            ((res as Record<string, unknown>).id !== undefined ||
+              (res as Record<string, unknown>).email !== undefined)
+          ) {
+            return { status: 'OK', message: 'Connection successful' };
+          }
+
+          return {
+            status: 'Error',
+            message:
+              'Connected, but did not receive a valid Datto EDR API response (got HTML/non-JSON). Make sure the Base URL ends with /api — e.g. https://YOUR-INSTANCE.infocyte.com/api.',
+          };
+        } catch (error) {
+          const statusCode =
+            (error as { statusCode?: number }).statusCode ??
+            (error as { response?: { statusCode?: number } }).response?.statusCode;
+
+          if (statusCode === 401 || statusCode === 403) {
+            return {
+              status: 'Error',
+              message:
+                'Authentication failed — check the API token (and that the Base URL ends with /api).',
+            };
+          }
+
+          const msg = (error as Error).message ?? 'request failed';
+          return {
+            status: 'Error',
+            message: `Could not reach the Datto EDR API: ${msg}. Verify the Base URL ends with /api.`,
+          };
+        }
+      },
+    },
+  };
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const items = this.getInputData();

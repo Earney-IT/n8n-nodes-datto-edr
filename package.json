@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-datto-edr",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Datto EDR (Infocyte) node for n8n — query endpoints, scans, threats/alerts, and run response actions. AI-agent ready.",
 	"license": "MIT",
 	"homepage": "https://github.com/Earney-IT/n8n-nodes-datto-edr",

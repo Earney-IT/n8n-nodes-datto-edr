@@ -45,3 +45,26 @@ test('apiRequestAllItems paginates via limit/skip until short page', async () =>
   expect(f0.skip).toBe(0); expect(f0.limit).toBe(100);
   expect(f1.skip).toBe(100);
 });
+
+// ── A: fail loud on non-JSON / HTML response ──────────────────────────────
+
+test('dattoEdrApiRequest throws NodeOperationError with /api hint when response is an HTML string', async () => {
+  const ctx = makeCtx({ httpResponses: ['<!doctype html><html><body>404</body></html>'] });
+  await expect(dattoEdrApiRequest.call(ctx, 'GET', 'Agents')).rejects.toThrow(
+    /non-JSON response|ends with \/api/i,
+  );
+});
+
+test('dattoEdrApiRequest throws when response is any non-object string', async () => {
+  const ctx = makeCtx({ httpResponses: ['just a plain string'] });
+  await expect(dattoEdrApiRequest.call(ctx, 'GET', 'users/me')).rejects.toThrow(
+    /non-JSON/i,
+  );
+});
+
+test('dattoEdrApiRequestAllItems throws with /api hint when page is a string', async () => {
+  const ctx = makeCtx({ httpResponses: ['<!doctype html>...'] });
+  await expect(dattoEdrApiRequestAllItems.call(ctx, 'Agents', {})).rejects.toThrow(
+    /\/api/i,
+  );
+});
